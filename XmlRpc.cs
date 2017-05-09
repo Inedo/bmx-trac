@@ -47,6 +47,7 @@ namespace Inedo.BuildMasterExtensions.Trac
         {
             var buffer = new MemoryStream();
             var request = WebRequest.Create(this.uri);
+
             request.ContentType = "text/xml; charset=\"utf-8\"";
             request.Method = "POST";
             if (!string.IsNullOrEmpty(this.authenticationToken))
@@ -56,44 +57,52 @@ namespace Inedo.BuildMasterExtensions.Trac
                 request.Headers.Add("Authorization", "Basic " + this.authenticationToken);
             }
 
-            var xmlWriter = XmlWriter.Create(buffer, new XmlWriterSettings() { Encoding = Encoding.UTF8 });
-
-            xmlWriter.WriteStartDocument();
-
-            xmlWriter.WriteStartElement("methodCall");
-            xmlWriter.WriteElementString("methodName", methodName);
-            xmlWriter.WriteStartElement("params");
-
-            if (args != null && args.Length > 0)
+            using (var xmlWriter = XmlWriter.Create(buffer, new XmlWriterSettings() { Encoding = Encoding.UTF8 }))
             {
-                foreach (var arg in args)
+                xmlWriter.WriteStartDocument();
+
+                xmlWriter.WriteStartElement("methodCall");
+                xmlWriter.WriteElementString("methodName", methodName);
+                xmlWriter.WriteStartElement("params");
+
+                if (args != null && args.Length > 0)
                 {
-                    xmlWriter.WriteStartElement("param");
-                    WriteValue(xmlWriter, arg);
-                    xmlWriter.WriteEndElement();
+                    foreach (var arg in args)
+                    {
+                        xmlWriter.WriteStartElement("param");
+                        WriteValue(xmlWriter, arg);
+                        xmlWriter.WriteEndElement();
+                    }
                 }
+
+                xmlWriter.WriteEndElement();
+                xmlWriter.WriteEndElement();
+
+                xmlWriter.WriteEndDocument();
+
+                xmlWriter.Flush();
             }
 
-            xmlWriter.WriteEndElement();
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndDocument();
-
-            xmlWriter.Flush();
-
             request.ContentLength = buffer.Length;
-            var requestStream = request.GetRequestStream();
-            requestStream.Write(buffer.ToArray(), 0, (int)buffer.Length);
+            using (var requestStream = request.GetRequestStream())
+            {
+                requestStream.Write(buffer.ToArray(), 0, (int)buffer.Length);
+            }
 
-            var response = request.GetResponse();
-            var doc = new XmlDocument();
-            doc.Load(response.GetResponseStream());
+            using (var response = request.GetResponse())
+            {
+                var doc = new XmlDocument();
+                using (var stream = response.GetResponseStream())
+                {
+                    doc.Load(stream);
+                }
 
-            var responseValues = doc.GetElementsByTagName("param");
-            if (responseValues.Count == 0)
-                return null;
-            else
-                return ReadValue(responseValues[0].FirstChild);
+                var responseValues = doc.GetElementsByTagName("param");
+                if (responseValues.Count == 0)
+                    return null;
+                else
+                    return ReadValue(responseValues[0].FirstChild);
+            }
         }
 
         /// <summary>
