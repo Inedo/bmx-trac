@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Inedo.BuildMaster.Extensibility.Providers;
 using Inedo.BuildMaster.Extensibility.Providers.IssueTracking;
-using Inedo.BuildMaster.Web;
 using Inedo.Serialization;
+using Inedo.Web;
 
 namespace Inedo.BuildMasterExtensions.Trac
 {
